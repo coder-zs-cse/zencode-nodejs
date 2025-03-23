@@ -52,3 +52,8 @@ nodemon server.js
 
 
 
+
+feat: integrate MongoDB database with the server
+
+- Added database and connection to MongoDB.
+- Updated server to handle database operations for the users collection.
