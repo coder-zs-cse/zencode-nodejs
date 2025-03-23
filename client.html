@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>React Component Parser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        textarea, pre {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 14px;
+            overflow: auto;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .examples {
+            margin-top: 20px;
+        }
+        .example {
+            margin-bottom: 10px;
+        }
+        .example button {
+            background-color: #2196F3;
+            margin-right: 10px;
+        }
+        .example button:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <h1>React Component Parser</h1>
+    <p>Enter your React component code below and click "Parse" to analyze it.</p>
+    
+    <div class="examples">
+        <h2>Examples</h2>
+        <div class="example">
+            <button id="example-form">Load Form Component</button>
+            <button id="example-gallery">Load Image Gallery Component</button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div>
+            <h2>React Component Code</h2>
+            <textarea id="component-code" placeholder="Paste your React component code here..."></textarea>
+            <button id="parse-btn">Parse Component</button>
+        </div>
+        <div>
+            <h2>Parsed Result</h2>
+            <pre id="parsed-result">// Results will appear here</pre>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('parse-btn').addEventListener('click', parseComponent);
+        document.getElementById('example-form').addEventListener('click', loadFormExample);
+        document.getElementById('example-gallery').addEventListener('click', loadGalleryExample);
+
+        const formExample = `import React, { ChangeEventHandler } from "react";
+import {
+  useForm,
+  SubmitHandler,
+  FieldValues,
+  Path,
+  FieldError,
+  DefaultValues,
+  Control,
+} from "react-hook-form";
+import Select from "../Select/Select";
+import Input from "../Input/Input";
+import Button from "../Button/Button";
+// ... more imports
+
+const Form = <TFieldValues extends FieldValues>({
+  formFields,
+  onSubmit,
+  submitButtonText = "Submit",
+  submitButtonProps = {},
+  formClassName = "",
+  children,
+  secondaryButton,
+  showSubmitButton = true,
+  onChange,
+  formRef,
+  validationSchema,
+  isEditing,
+}: FormProps<TFieldValues>): JSX.Element => {
+  // Component implementation
+  return (
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit(onSubmit)}
+      className={\`w-full \${formClassName}\`}
+    >
+      {/* Form content */}
+    </form>
+  );
+};
+
+export default Form;`;
+
+        const galleryExample = `import React, { useState } from "react";
+import Image from "next/image";
+import Button from "../Button/Button";
+// ... more imports
+
+interface ImageGalleryProps {
+  images: string[] | null;
+  className?: string;
+}
+
+const ImageGallery: React.FC<ImageGalleryProps> = ({ images, className = 'className-1' }) => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Component implementation
+  return (
+    <div className="relative w-full h-80">
+      {/* Component content */}
+    </div>
+  );
+};
+
+export default ImageGallery;`;
+
+        function loadFormExample() {
+            document.getElementById('component-code').value = formExample;
+        }
+
+        function loadGalleryExample() {
+            document.getElementById('component-code').value = galleryExample;
+        }
+
+        async function parseComponent() {
+            const code = document.getElementById('component-code').value;
+            const resultElement = document.getElementById('parsed-result');
+            
+            if (!code.trim()) {
+                resultElement.textContent = 'Please enter some React component code.';
+                return;
+            }
+            
+            resultElement.textContent = 'Parsing...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/parse', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code }),
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultElement.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultElement.textContent = `Error: ${data.error}\n${data.message || ''}`;
+                }
+            } catch (error) {
+                resultElement.textContent = `Failed to connect to the server: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html> 
