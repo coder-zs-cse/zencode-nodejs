@@ -532,6 +532,11 @@ function parseReactComponent(code) {
       }
     });
 
+    // Helper function to ensure type is never empty
+    const getTypeOrAny = (type) => {
+      return type && type !== 'unknown' ? type : 'any';
+    };
+
     // First scan the interfaces and types which have the highest quality information
     traverse(ast, {
       // Add support for TypeScript type aliases (export type FormField = {...})
@@ -557,7 +562,12 @@ function parseReactComponent(code) {
                     if (t.isTSFunctionType(typeAnnotation)) {
                       type = 'function';
                     } else if (t.isTSTypeReference(typeAnnotation)) {
-                      type = typeAnnotation.typeName.name;
+                      if (typeAnnotation.typeName.type === 'TSQualifiedName') {
+                        // Handle qualified names like React.ReactNode
+                        type = `${typeAnnotation.typeName.left.name}.${typeAnnotation.typeName.right.name}`;
+                      } else {
+                        type = typeAnnotation.typeName.name;
+                      }
                     } else {
                       type = typeAnnotation.type
                         .replace('TS', '')
@@ -675,7 +685,7 @@ function parseReactComponent(code) {
                 // Add the prop to the component info, avoiding duplicates
                 addProp({
                   name: member.key?.name,
-                  type,
+                  type: getTypeOrAny(type),
                   typeDetails,
                   optional: member.optional || false,
                   source: 'type-alias'
@@ -703,7 +713,12 @@ function parseReactComponent(code) {
                   if (t.isTSFunctionType(typeAnnotation)) {
                     type = 'function';
                   } else if (t.isTSTypeReference(typeAnnotation)) {
-                    type = typeAnnotation.typeName.name;
+                    if (typeAnnotation.typeName.type === 'TSQualifiedName') {
+                      // Handle qualified names like React.ReactNode
+                      type = `${typeAnnotation.typeName.left.name}.${typeAnnotation.typeName.right.name}`;
+                    } else {
+                      type = typeAnnotation.typeName.name;
+                    }
                   } else {
                     type = typeAnnotation.type
                       .replace('TS', '')
@@ -821,7 +836,7 @@ function parseReactComponent(code) {
               // Add the prop to the component info
               addProp({
                 name: member.key?.name,
-                type,
+                type: getTypeOrAny(type),
                 typeDetails,
                 optional: member.optional || false,
                 source: 'interface'
