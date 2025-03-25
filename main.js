@@ -999,7 +999,7 @@ module.exports = parseReactComponent;
 // Example usage
 try {
   const result = parseReactComponent(formTemplateString);
-  console.log(JSON.stringify(result, null, 2));
+  // console.log(JSON.stringify(result, null, 2));
 } catch (error) {
   console.error('Error:', error.message);
 }
