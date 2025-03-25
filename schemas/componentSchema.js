@@ -10,6 +10,11 @@ const componentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  indexingStatus: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
   componentPath: {
     type: String,
     required: true
