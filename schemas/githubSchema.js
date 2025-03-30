@@ -6,7 +6,8 @@ const githubSchema = new mongoose.Schema({
     required: true
   },
   userId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User', 
     required: true,
     unique: true
   },
@@ -31,4 +32,4 @@ const githubSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('github', githubSchema);
+module.exports = mongoose.model('Github', githubSchema);

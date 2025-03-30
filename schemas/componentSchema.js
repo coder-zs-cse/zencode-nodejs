@@ -2,9 +2,13 @@ const mongoose = require('mongoose');
 
 const componentSchema = new mongoose.Schema({
   userId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId, 
     required: true,
     ref: 'User'
+  },
+  githubUrl: {
+    type: String,
+    required: true,
   },
   componentName: {
     type: String,
