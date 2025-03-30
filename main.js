@@ -482,6 +482,8 @@ function parseReactComponent(code) {
       name: null,
       props: [],
       dependencies: [],
+      imports: [], // Enhanced imports information
+      cssClasses: [], // Store all CSS classes
       isTypescript: false,
       exports: [],
       methods: [],
@@ -500,11 +502,189 @@ function parseReactComponent(code) {
       }
       return false;
     };
+
+    // Helper to extract CSS classes from string literals
+    const extractCssClasses = (str) => {
+      if (typeof str !== 'string') return [];
+      
+      // Extract classes from string literals like "bg-white text-black"
+      const directClasses = str.split(/\s+/).filter(Boolean);
+      
+      // Extract classes from template literals like `w-full ${className}`
+      const templateMatches = str.match(/\$\{.*?\}/g) || [];
+      
+      return directClasses.filter(cls => !cls.includes('${'));
+    };
     
-    // Track imports
+    // Helper to process className attributes in JSX
+    const processCssClassNames = (attributes) => {
+      if (!Array.isArray(attributes)) return;
+      
+      attributes.forEach(attr => {
+        if (attr.name && attr.name.name === 'className') {
+          // Direct string value
+          if (t.isStringLiteral(attr.value)) {
+            const classes = extractCssClasses(attr.value.value);
+            classes.forEach(cls => {
+              if (!componentInfo.cssClasses.includes(cls)) {
+                componentInfo.cssClasses.push(cls);
+              }
+            });
+          }
+          // JSX expression container (like className={`${styles.row()}`})
+          else if (t.isJSXExpressionContainer(attr.value)) {
+            // Template literals in expressions
+            if (t.isTemplateLiteral(attr.value.expression)) {
+              attr.value.expression.quasis.forEach(quasi => {
+                const classes = extractCssClasses(quasi.value.cooked);
+                classes.forEach(cls => {
+                  if (!componentInfo.cssClasses.includes(cls)) {
+                    componentInfo.cssClasses.push(cls);
+                  }
+                });
+              });
+            }
+            // String literals in expressions
+            else if (t.isStringLiteral(attr.value.expression)) {
+              const classes = extractCssClasses(attr.value.expression.value);
+              classes.forEach(cls => {
+                if (!componentInfo.cssClasses.includes(cls)) {
+                  componentInfo.cssClasses.push(cls);
+                }
+              });
+            }
+          }
+        }
+      });
+    };
+    
+    // Track detailed imports (what is imported and from where)
     traverse(ast, {
       ImportDeclaration(path) {
-        componentInfo.dependencies.push(path.node.source.value);
+        const source = path.node.source.value;
+        componentInfo.dependencies.push(source);
+        
+        const importDetails = {
+          source: source,
+          imports: []
+        };
+        
+        path.node.specifiers.forEach(specifier => {
+          // Default import: import Name from 'module'
+          if (t.isImportDefaultSpecifier(specifier)) {
+            importDetails.imports.push({
+              type: 'default',
+              name: specifier.local.name
+            });
+          }
+          // Named import: import { Name } from 'module'
+          else if (t.isImportSpecifier(specifier)) {
+            importDetails.imports.push({
+              type: 'named',
+              name: specifier.local.name,
+              importedName: specifier.imported ? specifier.imported.name : specifier.local.name
+            });
+          }
+          // Namespace import: import * as Name from 'module'
+          else if (t.isImportNamespaceSpecifier(specifier)) {
+            importDetails.imports.push({
+              type: 'namespace',
+              name: specifier.local.name
+            });
+          }
+        });
+        
+        componentInfo.imports.push(importDetails);
+      }
+    });
+
+    // Find CSS classes in JSX className attributes
+    traverse(ast, {
+      JSXOpeningElement(path) {
+        processCssClassNames(path.node.attributes);
+      }
+    });
+
+    // Scan for CSS classes in string literals and template literals throughout the code
+    traverse(ast, {
+      StringLiteral(path) {
+        // Possible CSS class strings (look for contexts where classes are used)
+        if (path.parent.type === 'JSXAttribute' && path.parent.name.name === 'className') {
+          const classes = extractCssClasses(path.node.value);
+          classes.forEach(cls => {
+            if (!componentInfo.cssClasses.includes(cls)) {
+              componentInfo.cssClasses.push(cls);
+            }
+          });
+        }
+      },
+      
+      TemplateLiteral(path) {
+        // Check if this template is used in a className context
+        const isInClassName = path.parent && 
+                             ((path.parent.type === 'JSXExpressionContainer' && 
+                               path.parentPath.parent.name && 
+                               path.parentPath.parent.name.name === 'className') ||
+                              (path.parent.type === 'CallExpression' && 
+                               path.parent.callee.property && 
+                               ['cx', 'classNames', 'className'].includes(path.parent.callee.property.name)));
+        
+        if (isInClassName) {
+          path.node.quasis.forEach(quasi => {
+            const classes = extractCssClasses(quasi.value.cooked);
+            classes.forEach(cls => {
+              if (!componentInfo.cssClasses.includes(cls)) {
+                componentInfo.cssClasses.push(cls);
+              }
+            });
+          });
+        }
+      },
+      
+      // Check for Tailwind class utilities and styled-components
+      CallExpression(path) {
+        // Check for className generators like tailwind's cn(), cx(), classnames(), etc.
+        if (path.node.callee.name && ['cn', 'cx', 'classNames', 'className'].includes(path.node.callee.name)) {
+          path.node.arguments.forEach(arg => {
+            if (t.isStringLiteral(arg)) {
+              const classes = extractCssClasses(arg.value);
+              classes.forEach(cls => {
+                if (!componentInfo.cssClasses.includes(cls)) {
+                  componentInfo.cssClasses.push(cls);
+                }
+              });
+            }
+          });
+        }
+        
+        // Style function calls like styles.row()
+        if (t.isMemberExpression(path.node.callee) && 
+            path.node.callee.object && 
+            path.node.callee.object.name === 'styles') {
+          // Add the style function name
+          if (path.node.callee.property && path.node.callee.property.name) {
+            const styleName = `styles.${path.node.callee.property.name}()`;
+            if (!componentInfo.cssClasses.includes(styleName)) {
+              componentInfo.cssClasses.push(styleName);
+            }
+          }
+          
+          // Check for classes passed as arguments
+          path.node.arguments.forEach(arg => {
+            if (t.isObjectExpression(arg)) {
+              arg.properties.forEach(prop => {
+                if (prop.key && prop.key.name === 'class' && t.isStringLiteral(prop.value)) {
+                  const classes = extractCssClasses(prop.value.value);
+                  classes.forEach(cls => {
+                    if (!componentInfo.cssClasses.includes(cls)) {
+                      componentInfo.cssClasses.push(cls);
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
       }
     });
 
@@ -998,7 +1178,7 @@ module.exports = parseReactComponent;
 // This code can be left here or moved to a test file
 // Example usage
 try {
-  const result = parseReactComponent(formTemplateString);
+  const result = parseReactComponent(galleryString);
   // console.log(JSON.stringify(result, null, 2));
 } catch (error) {
   console.error('Error:', error.message);
