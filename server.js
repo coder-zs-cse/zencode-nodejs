@@ -1,35 +1,44 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ObjectId } = require("mongodb");
+const mongoose = require("mongoose");
 require("dotenv").config();
 const parseReactComponent = require("./main");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-//MongoDB credentials
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.DB_NAME;
-const client = new MongoClient(uri);
-
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
 // Connect to MongoDB
-async function connectToMongo() {
-  try {
-    await client.connect();
-    console.log("Connected to MongoDB");
-  } catch (error) {
-    console.error("Error connecting to MongoDB:", error);
-    process.exit(1);
-  }
-}
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/component-parser')
+  .then(() => console.log('Connected to MongoDB'))
+  .catch(err => console.error('MongoDB connection error:', err));
+
+// Import route handlers
+const componentsRouter = require('./routes/components');
+const githubRouter = require('./routes/github');
+const usersRouter = require('./routes/users');
+
+// Routes
+app.use('/api/components', componentsRouter);
+app.use('/api/github', githubRouter);
+app.use('/api/users', usersRouter);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
 
 // API base path
 const API_BASE = "/api";
-
 
 app.post(`${API_BASE}/parse`, (req, res) => {
   try {
@@ -59,22 +68,11 @@ app.post(`${API_BASE}/parse`, (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get(`${API_BASE}/health`, async (req, res) => {
-  try {
-    await client.db(dbName).command({ ping: 1 });
-    res.status(200).json({ status: "ok", message: "Connection successful" });
-  } catch (error) {
-    console.error("Health check failed:", error);
-    res.status(500).json({ status: "error", message: error.message });
-  }
-});
-
 // Insert one document
 app.post(`${API_BASE}/:collection`, async (req, res) => {
   try {
     const { collection } = req.params;
-    const db = client.db(dbName);
+    const db = mongoose.connection.db;
     const coll = db.collection(collection);
     const result = await coll.insertOne(req.body);
     res.status(201).json({
@@ -96,7 +94,7 @@ app.post(`${API_BASE}/:collection/insertMany`, async (req, res) => {
       return res.status(400).json({ error: "documents must be an array" });
     }
 
-    const db = client.db(dbName);
+    const db = mongoose.connection.db;
     const coll = db.collection(collection);
     const result = await coll.insertMany(documents);
 
@@ -126,13 +124,13 @@ app.get(`${API_BASE}/:collection/findOne`, async (req, res) => {
 
     if (query && query._id) {
       try {
-        query._id = new ObjectId(query._id);
+        query._id = new mongoose.Types.ObjectId(query._id);
       } catch (e) {
         return res.status(400).json({ error: "Query is required" });
       }
     }
 
-    const db = client.db(dbName);
+    const db = mongoose.connection.db;
     const coll = db.collection(collection);
     const result = await coll.findOne(query || {});
     if (!result) {
@@ -150,7 +148,7 @@ app.get(`${API_BASE}/:collection/findOne`, async (req, res) => {
 app.get(`${API_BASE}/:collection/find`, async (req, res) => {
   try {
     const { collection } = req.params;
-    const db = client.db(dbName);
+    const db = mongoose.connection.db;
     const coll = db.collection(collection);
     const result = await coll.find({}).toArray();
     res.json(result);
@@ -175,13 +173,13 @@ app.patch(`${API_BASE}/:collection`, async (req, res) => {
 
     if (query && query._id) {
       try {
-        query._id = new ObjectId(query._id);
+        query._id = new mongoose.Types.ObjectId(query._id);
       } catch (e) {
         return res.status(400).json({ error: "Query is required" });
       }
     }
 
-    const db = client.db(dbName);
+    const db = mongoose.connection.db;
     const coll = db.collection(collection);
 
     const result = await coll.updateOne(query, { $set: body });
@@ -217,13 +215,13 @@ app.delete(`${API_BASE}/:collection`, async (req, res) => {
 
     if (query && query._id) {
       try {
-        query._id = new ObjectId(query._id);
+        query._id = new mongoose.Types.ObjectId(query._id);
       } catch (e) {
         return res.status(400).json({ error: "Query id is required" });
       }
     }
 
-    const db = client.db(dbName);
+    const db = mongoose.connection.db;
     const coll = db.collection(collection);
 
     const result = await coll.deleteOne(query);
@@ -237,9 +235,6 @@ app.delete(`${API_BASE}/:collection`, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// API endpoint for parsing React components
-
 
 // Basic root endpoint
 app.get("/", (req, res) => {
@@ -260,15 +255,12 @@ app.get("/", (req, res) => {
 });
 
 // Start the server
-connectToMongo().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-    console.log(`API available at http://localhost:${PORT}`);
-  });
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 // Handle application shutdown
 process.on("SIGINT", async () => {
-  await client.close();
+  await mongoose.connection.close();
   process.exit(0);
 });

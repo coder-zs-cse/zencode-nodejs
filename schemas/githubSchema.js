@@ -16,6 +16,10 @@ const githubSchema = new mongoose.Schema({
     enum: ['IN_PROGRESS', 'ERROR', 'COMPLETED'],
     default: null
   },
+  componentList: {
+    type: [String],
+    default: []
+  },
   packageJson: {
     type: String,
     default: null
