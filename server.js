@@ -142,6 +142,8 @@ app.get(`${API_BASE}/:collection/findOne`, async (req, res) => {
   }
 });
 
+
+
 // Find many documents
 app.get(`${API_BASE}/:collection/find`, async (req, res) => {
   try {
@@ -193,6 +195,25 @@ app.patch(`${API_BASE}/:collection`, async (req, res) => {
   }
 });
 
+// Find one document
+app.get(`${API_BASE}/:collection/:userId`, async (req, res) => {
+  try {
+    const { collection, userId } = req.params;
+    console.log(userId,collection)
+    const db = mongoose.connection.db;
+    const coll = db.collection(collection);
+    let result = await coll.find().toArray();
+    if (!result) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    result = result.filter(x => x.userId == userId)
+    res.json(result[0]);
+  } catch (error) {
+    console.error(`Error in findOne:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update one document by userId
 app.patch(`${API_BASE}/:collection/:userId`, async (req, res) => {
   try {
@@ -224,6 +245,8 @@ app.patch(`${API_BASE}/:collection/:userId`, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
 
 // Delete one document
 app.delete(`${API_BASE}/:collection`, async (req, res) => {
