@@ -30,11 +30,10 @@ async function connectToMongo() {
 // API base path
 const API_BASE = "/api";
 
-
+// API endpoint for parsing React components
 app.post(`${API_BASE}/parse`, (req, res) => {
   try {
     const { code } = req.body;
-
     if (!code) {
       return res.status(400).json({
         error: "Missing required parameter: code",
@@ -48,7 +47,6 @@ app.post(`${API_BASE}/parse`, (req, res) => {
         error: "Failed to parse the React component",
       });
     }
-
     return res.json(result);
   } catch (error) {
     console.error("Error parsing component:", error);
@@ -197,6 +195,38 @@ app.patch(`${API_BASE}/:collection`, async (req, res) => {
   }
 });
 
+// Update one document by userId
+app.patch(`${API_BASE}/:collection/:userId`, async (req, res) => {
+  try {
+    const { collection, userId } = req.params;
+    console.log(collection,userId)
+    const body = req.body;
+    if (!userId && !_id|| !body) {
+      return res
+        .status(400)
+        .json({ error: "Id and body objects are required" });
+    }
+    const db = client.db(dbName);
+    const coll = db.collection(collection);
+    const result = await coll.findOneAndUpdate(
+      {userId:userId},
+      { $set: body },
+      { returnDocument: 'after' } // This will return the updated document
+    );
+    if (!result) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    res.json({
+      success: true,
+      updatedDocument: result
+    });
+  } catch (error) {
+    console.error(`Error in updateOne:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete one document
 app.delete(`${API_BASE}/:collection`, async (req, res) => {
   try {
@@ -237,9 +267,6 @@ app.delete(`${API_BASE}/:collection`, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-// API endpoint for parsing React components
-
 
 // Basic root endpoint
 app.get("/", (req, res) => {
