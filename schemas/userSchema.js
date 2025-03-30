@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
 const IndexingStatus = {
+  NOT_STARTED:'NOT_STARTED',
   IN_PROGRESS: 'IN_PROGRESS',
   ERROR: 'ERROR',
   COMPLETED: 'COMPLETED'
