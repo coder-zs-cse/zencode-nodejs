@@ -31,4 +31,4 @@ const githubSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('GitHub', githubSchema);
+module.exports = mongoose.model('github', githubSchema);
