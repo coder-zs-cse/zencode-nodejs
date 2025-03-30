@@ -43,7 +43,6 @@ const API_BASE = "/api";
 app.post(`${API_BASE}/parse`, (req, res) => {
   try {
     const { code } = req.body;
-
     if (!code) {
       return res.status(400).json({
         error: "Missing required parameter: code",
@@ -57,7 +56,6 @@ app.post(`${API_BASE}/parse`, (req, res) => {
         error: "Failed to parse the React component",
       });
     }
-
     return res.json(result);
   } catch (error) {
     console.error("Error parsing component:", error);
@@ -188,6 +186,38 @@ app.patch(`${API_BASE}/:collection`, async (req, res) => {
       matchedCount: result.matchedCount,
       modifiedCount: result.modifiedCount,
       acknowledged: result.acknowledged,
+    });
+  } catch (error) {
+    console.error(`Error in updateOne:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update one document by userId
+app.patch(`${API_BASE}/:collection/:userId`, async (req, res) => {
+  try {
+    const { collection, userId } = req.params;
+    console.log(collection,userId)
+    const body = req.body;
+    if (!userId && !_id|| !body) {
+      return res
+        .status(400)
+        .json({ error: "Id and body objects are required" });
+    }
+    const db = client.db(dbName);
+    const coll = db.collection(collection);
+    const result = await coll.findOneAndUpdate(
+      {userId:userId},
+      { $set: body },
+      { returnDocument: 'after' } // This will return the updated document
+    );
+    if (!result) {
+      return res.status(404).json({ error: "Document not found" });
+    }
+
+    res.json({
+      success: true,
+      updatedDocument: result
     });
   } catch (error) {
     console.error(`Error in updateOne:`, error);
