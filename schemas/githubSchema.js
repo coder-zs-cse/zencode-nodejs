@@ -9,7 +9,6 @@ const githubSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User', 
     required: true,
-    unique: true
   },
   indexingStatus: {
     type: String,
@@ -36,4 +35,4 @@ const githubSchema = new mongoose.Schema({
   timestamps: true
 });
 
-module.exports = mongoose.model('Github', githubSchema);
+module.exports = mongoose.model('GithubCollection', githubSchema);

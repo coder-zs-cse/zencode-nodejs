@@ -7,6 +7,7 @@ router.post('/', async (req, res) => {
   try {
     const user = new User(req.body);
     const result = await user.save();
+    console.log(result);
     res.status(201).json({ insertedId: result._id });
   } catch (error) {
     res.status(400).json({ error: error.message });

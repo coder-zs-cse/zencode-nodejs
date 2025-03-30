@@ -1,14 +1,8 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  email: {
-    type: String,
-    required: true,
-    unique: true
-  },
   name: {
     type: String,
-    required: true
   },
   githubUsername: {
     type: String
@@ -21,5 +15,15 @@ const userSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Add method to drop all indexes
+userSchema.statics.dropAllIndexes = async function() {
+  try {
+    await this.collection.dropIndexes();
+    console.log('All indexes dropped successfully');
+  } catch (error) {
+    console.error('Error dropping indexes:', error);
+  }
+};
 
 module.exports = mongoose.model('User', userSchema); 
