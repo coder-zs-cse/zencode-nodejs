@@ -77,9 +77,9 @@ app.post(`${API_BASE}/:collection`, async (req, res) => {
     const db = client.db(dbName);
     const coll = db.collection(collection);
     const result = await coll.insertOne(req.body);
-    res.status(201).json({ 
+    res.status(201).json({
       insertedId: result.insertedId.toString(),
-      acknowledged: result.acknowledged
+      acknowledged: result.acknowledged,
     });
   } catch (error) {
     console.error(`Error in insertOne:`, error);
@@ -91,19 +91,18 @@ app.post(`${API_BASE}/:collection`, async (req, res) => {
 app.post(`${API_BASE}/:collection/insertMany`, async (req, res) => {
   try {
     const { collection } = req.params;
-    const { documents } = req.body;
-    
+    const documents = req.body;
     if (!Array.isArray(documents)) {
       return res.status(400).json({ error: "documents must be an array" });
     }
-    
+
     const db = client.db(dbName);
     const coll = db.collection(collection);
     const result = await coll.insertMany(documents);
-    
-    res.status(201).json({ 
+
+    res.status(201).json({
       insertedCount: result.insertedCount,
-      insertedIds: result.insertedIds
+      insertedIds: result.insertedIds,
     });
   } catch (error) {
     console.error(`Error in insertMany:`, error);
@@ -115,34 +114,31 @@ app.post(`${API_BASE}/:collection/insertMany`, async (req, res) => {
 app.get(`${API_BASE}/:collection/findOne`, async (req, res) => {
   try {
     const { collection } = req.params;
-    let query = req.query.query;
-    
-    // Parse the query string into an object if it's a string
-    if (typeof query === 'string') {
+    let query = req.query;
+
+    if (typeof query === "string") {
       try {
         query = JSON.parse(query);
       } catch (e) {
         return res.status(400).json({ error: "Invalid query format" });
       }
     }
-    
-    // Convert string _id to ObjectId if present
+
     if (query && query._id) {
       try {
         query._id = new ObjectId(query._id);
       } catch (e) {
-        // Ignore if not a valid ObjectId
+        return res.status(400).json({ error: "Query is required" });
       }
     }
-    
+
     const db = client.db(dbName);
     const coll = db.collection(collection);
     const result = await coll.findOne(query || {});
-    
     if (!result) {
       return res.status(404).json({ message: "Document not found" });
     }
-    
+
     res.json(result);
   } catch (error) {
     console.error(`Error in findOne:`, error);
@@ -154,30 +150,9 @@ app.get(`${API_BASE}/:collection/findOne`, async (req, res) => {
 app.get(`${API_BASE}/:collection/find`, async (req, res) => {
   try {
     const { collection } = req.params;
-    let query = req.query.query;
-    
-    // Parse the query string into an object if it's a string
-    if (typeof query === 'string') {
-      try {
-        query = JSON.parse(query);
-      } catch (e) {
-        return res.status(400).json({ error: "Invalid query format" });
-      }
-    }
-    
-    // Convert string _id to ObjectId if present
-    if (query && query._id) {
-      try {
-        query._id = new ObjectId(query._id);
-      } catch (e) {
-        // Ignore if not a valid ObjectId
-      }
-    }
-    
     const db = client.db(dbName);
     const coll = db.collection(collection);
-    const result = await coll.find(query || {}).toArray();
-    
+    const result = await coll.find({}).toArray();
     res.json(result);
   } catch (error) {
     console.error(`Error in find:`, error);
@@ -189,68 +164,35 @@ app.get(`${API_BASE}/:collection/find`, async (req, res) => {
 app.patch(`${API_BASE}/:collection`, async (req, res) => {
   try {
     const { collection } = req.params;
-    const { query, update } = req.body;
-    
-    if (!query || !update) {
-      return res.status(400).json({ error: "Query and update objects are required" });
+    const query = req.query;
+    const body = req.body;
+
+    if (!query || !body) {
+      return res
+        .status(400)
+        .json({ error: "Query and body objects are required" });
     }
-    
-    // Convert string _id to ObjectId if present
+
     if (query && query._id) {
       try {
         query._id = new ObjectId(query._id);
       } catch (e) {
-        // Ignore if not a valid ObjectId
+        return res.status(400).json({ error: "Query is required" });
       }
     }
-    
+
     const db = client.db(dbName);
     const coll = db.collection(collection);
-    
-    const result = await coll.updateOne(query, { $set: update });
-    
+
+    const result = await coll.updateOne(query, { $set: body });
+
     res.json({
       matchedCount: result.matchedCount,
       modifiedCount: result.modifiedCount,
-      acknowledged: result.acknowledged
+      acknowledged: result.acknowledged,
     });
   } catch (error) {
     console.error(`Error in updateOne:`, error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Update many documents
-app.patch(`${API_BASE}/:collection/updateMany`, async (req, res) => {
-  try {
-    const { collection } = req.params;
-    const { query, update } = req.body;
-    
-    if (!query || !update) {
-      return res.status(400).json({ error: "Query and update objects are required" });
-    }
-    
-    // Convert string _id to ObjectId if present
-    if (query && query._id) {
-      try {
-        query._id = new ObjectId(query._id);
-      } catch (e) {
-        // Ignore if not a valid ObjectId
-      }
-    }
-    
-    const db = client.db(dbName);
-    const coll = db.collection(collection);
-    
-    const result = await coll.updateMany(query, { $set: update });
-    
-    res.json({
-      matchedCount: result.matchedCount,
-      modifiedCount: result.modifiedCount,
-      acknowledged: result.acknowledged
-    });
-  } catch (error) {
-    console.error(`Error in updateMany:`, error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -259,38 +201,36 @@ app.patch(`${API_BASE}/:collection/updateMany`, async (req, res) => {
 app.delete(`${API_BASE}/:collection`, async (req, res) => {
   try {
     const { collection } = req.params;
-    let query = req.query.query;
-    
-    // Parse the query string into an object if it's a string
-    if (typeof query === 'string') {
+    let query = req.query;
+
+    if (typeof query === "string") {
       try {
         query = JSON.parse(query);
       } catch (e) {
         return res.status(400).json({ error: "Invalid query format" });
       }
     }
-    
+
     if (!query) {
       return res.status(400).json({ error: "Query is required" });
     }
-    
-    // Convert string _id to ObjectId if present
+
     if (query && query._id) {
       try {
         query._id = new ObjectId(query._id);
       } catch (e) {
-        // Ignore if not a valid ObjectId
+        return res.status(400).json({ error: "Query id is required" });
       }
     }
-    
+
     const db = client.db(dbName);
     const coll = db.collection(collection);
-    
+
     const result = await coll.deleteOne(query);
-    
+
     res.json({
       deletedCount: result.deletedCount,
-      acknowledged: result.acknowledged
+      acknowledged: result.acknowledged,
     });
   } catch (error) {
     console.error(`Error in deleteOne:`, error);
@@ -313,9 +253,8 @@ app.get("/", (req, res) => {
         `${API_BASE}/:collection/findOne - GET: Find one document`,
         `${API_BASE}/:collection/find - GET: Find many documents`,
         `${API_BASE}/:collection - PATCH: Update one document`,
-        `${API_BASE}/:collection/updateMany - PATCH: Update many documents`,
         `${API_BASE}/:collection - DELETE: Delete one document`,
-      ]
+      ],
     },
   });
 });
@@ -324,7 +263,7 @@ app.get("/", (req, res) => {
 connectToMongo().then(() => {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`API available at http://localhost:${PORT}${API_BASE}`);
+    console.log(`API available at http://localhost:${PORT}`);
   });
 });
 
