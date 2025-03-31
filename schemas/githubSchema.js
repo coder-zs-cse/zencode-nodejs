@@ -35,4 +35,13 @@ const githubSchema = new mongoose.Schema({
   timestamps: true
 });
 
+githubSchema.statics.dropAllIndexes = async function() {
+  try {
+    await this.collection.dropIndexes();
+    console.log('All indexes dropped successfully');
+  } catch (error) {
+    console.error('Error dropping indexes:', error);
+  }
+};
+
 module.exports = mongoose.model('GithubCollection', githubSchema);
