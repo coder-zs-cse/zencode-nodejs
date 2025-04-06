@@ -108,7 +108,7 @@ router.get('/find', async (req, res) => {
 });
 
 // PATCH /api/components - Update one component
-router.patch('/', async (req, res) => {
+router.patch('/update_one', async (req, res) => {
   try {
     const { query, update } = req.body;
     if (!query || !update) {
