@@ -77,9 +77,9 @@ router.get('/findOne', async (req, res) => {
 
     const result = await Github.findOne(query);
     if (!result) {
-      return res.status(404).json({ error: 'Repository not found' });
+      return res.status(200).json({ success: false,message: 'Repository not found' });
     }
-    res.json(result);
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('Error finding GitHub repo:', error);
     res.status(500).json({ error: 'Internal server error while finding repository' });

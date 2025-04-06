@@ -40,6 +40,14 @@ const componentSchema = new mongoose.Schema({
   importPath: {
     type: String,
     default: ''
+  },
+  inputProps: {
+    type: String,
+    default: ''
+  },
+  code: {
+    type: String,
+    default: ''
   }
 }, {
   timestamps: true
