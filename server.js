@@ -47,11 +47,13 @@ mongoose.connection.on('disconnected', () => {
 const componentsRouter = require('./routes/components');
 const githubRouter = require('./routes/github');
 const usersRouter = require('./routes/users');
+const sessionsRouter = require('./routes/sessions');
 
 // Routes
 app.use('/api/components', componentsRouter);
 app.use('/api/github', githubRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/sessions', sessionsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -64,16 +64,10 @@ router.post('/insertMany', async (req, res) => {
   }
 });
 
-// GET /api/components/findOne - Find one component
-router.get('/findOne', async (req, res) => {
+// POST /api/components/findOne - Find one component
+router.post('/findOne', async (req, res) => {
   try {
-    let query;
-    try {
-      query = JSON.parse(req.query.query || '{}');
-    } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid query format' });
-    }
-
+    const query = req.body.query || {};
     const result = await Component.findOne(query);
     if (!result) {
       return res.status(404).json({ error: 'Component not found' });
@@ -85,21 +79,11 @@ router.get('/findOne', async (req, res) => {
   }
 });
 
-// GET /api/components/find - Find many components
-router.get('/find', async (req, res) => {
+// POST /api/components/find - Find many components
+router.post('/find', async (req, res) => {
   try {
-    let query;
-    console.log("query in find", req.query.query);
-    try {
-      // Clean up the query string by replacing single quotes with double quotes
-      const cleanQuery = req.query.query ? req.query.query.replace(/'/g, '"') : '{}';
-      console.log("clearnquery", cleanQuery);
-      query = JSON.parse(cleanQuery);
-    } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid query format' });
-    }
+    const query = req.body.query || {};
     const result = await Component.find(query);
-    console.log("result in find", result);
     res.json(result);
   } catch (error) {
     console.error('Error finding components:', error);
@@ -108,7 +92,7 @@ router.get('/find', async (req, res) => {
 });
 
 // PATCH /api/components - Update one component
-router.patch('/', async (req, res) => {
+router.patch('/update_one', async (req, res) => {
   try {
     const { query, update } = req.body;
     if (!query || !update) {

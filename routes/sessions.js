@@ -1,15 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const Github = require('../schemas/githubSchema');
+const Session = require('../schemas/sessionSchema');
 
-// // Validation middleware
-// const validateGithubData = (req, res, next) => {
-//   const { name, url, description } = req.body;
+// Validation middleware
+// const validateSessionData = (req, res, next) => {
+//   const { title } = req.body;
 //   const errors = [];
 
-//   if (!name) errors.push('Repository name is required');
-//   if (!url) errors.push('Repository URL is required');
-//   if (description && typeof description !== 'string') errors.push('Description must be a string');
+//   if (!title) errors.push('Session title is required');
 
 //   if (errors.length > 0) {
 //     return res.status(400).json({ errors });
@@ -17,26 +15,22 @@ const Github = require('../schemas/githubSchema');
 //   next();
 // };
 
-// POST /api/github - Insert one GitHub repo
+// POST /api/sessions - Insert one session
 router.post('/', async (req, res) => {
   try {
-    const github = new Github(req.body);
-    const result = await github.save();
-    console.log("result in post github route", result)
+    const session = new Session(req.body);
+    const result = await session.save();
     res.status(201).json({ insertedId: result._id });
   } catch (error) {
-    console.error('Error creating GitHub repo:', error);
+    console.error('Error creating session:', error);
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
     }
-    if (error.code === 11000) {
-      return res.status(409).json({ error: 'Repository already exists' });
-    }
-    res.status(500).json({ error: 'Internal server error while creating repository' });
+    res.status(500).json({ error: 'Internal server error while creating session' });
   }
 });
 
-// POST /api/github/insertMany - Insert many GitHub repos
+// POST /api/sessions/insertMany - Insert many sessions
 router.post('/insertMany', async (req, res) => {
   try {
     const { documents } = req.body;
@@ -47,10 +41,10 @@ router.post('/insertMany', async (req, res) => {
       return res.status(400).json({ error: 'Documents array cannot be empty' });
     }
 
-    const result = await Github.insertMany(documents, { ordered: false });
+    const result = await Session.insertMany(documents, { ordered: false });
     res.status(201).json({ insertedCount: result.length });
   } catch (error) {
-    console.error('Error inserting multiple GitHub repos:', error);
+    console.error('Error inserting multiple sessions:', error);
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
     }
@@ -61,38 +55,38 @@ router.post('/insertMany', async (req, res) => {
         details: error.writeErrors.map(e => e.errmsg)
       });
     }
-    res.status(500).json({ error: 'Internal server error while inserting repositories' });
+    res.status(500).json({ error: 'Internal server error while inserting sessions' });
   }
 });
 
-// POST /api/github/findOne - Find one GitHub repo
+// POST /api/sessions/findOne - Find one session
 router.post('/findOne', async (req, res) => {
   try {
     const query = req.body.query || {};
-    const result = await Github.findOne(query);
+    const result = await Session.findOne(query);
     if (!result) {
-      return res.status(200).json({ success: false, message: 'Repository not found' });
+      return res.status(404).json({ error: 'Session not found' });
     }
-    res.json({ success: true, data: result });
+    res.json(result);
   } catch (error) {
-    console.error('Error finding GitHub repo:', error);
-    res.status(500).json({ error: 'Internal server error while finding repository' });
+    console.error('Error finding session:', error);
+    res.status(500).json({ error: 'Internal server error while finding session' });
   }
 });
 
-// POST /api/github/find - Find many GitHub repos
+// POST /api/sessions/find - Find many sessions
 router.post('/find', async (req, res) => {
   try {
     const query = req.body.query || {};
-    const result = await Github.find(query);
+    const result = await Session.find(query).sort({ updatedAt: -1 }); // Most recent first
     res.json(result);
   } catch (error) {
-    console.error('Error finding GitHub repos:', error);
-    res.status(500).json({ error: 'Internal server error while finding repositories' });
+    console.error('Error finding sessions:', error);
+    res.status(500).json({ error: 'Internal server error while finding sessions' });
   }
 });
 
-// PATCH /api/github - Update one GitHub repo
+// PATCH /api/sessions - Update one session
 router.patch('/', async (req, res) => {
   try {
     const { query, update } = req.body;
@@ -100,24 +94,28 @@ router.patch('/', async (req, res) => {
       return res.status(400).json({ error: 'Both query and update objects are required' });
     }
 
-    const result = await Github.updateOne(query, update, { runValidators: true });
+    const result = await Session.updateOne(query, update, { 
+      new: true, 
+      runValidators: true 
+    });
+    
     if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'No repository found matching the query' });
+      return res.status(404).json({ error: 'No session found matching the query' });
     }
     res.json({ 
       modifiedCount: result.modifiedCount,
       matched: result.matchedCount 
     });
   } catch (error) {
-    console.error('Error updating GitHub repo:', error);
+    console.error('Error updating session:', error);
     if (error.name === 'ValidationError') {
       return res.status(400).json({ error: 'Validation error', details: error.errors });
     }
-    res.status(500).json({ error: 'Internal server error while updating repository' });
+    res.status(500).json({ error: 'Internal server error while updating session' });
   }
 });
 
-// PATCH /api/github/updateMany - Update many GitHub repos
+// PATCH /api/sessions/updateMany - Update many sessions
 router.patch('/updateMany', async (req, res) => {
   try {
     const { updates } = req.body;
@@ -138,7 +136,7 @@ router.patch('/updateMany', async (req, res) => {
           continue;
         }
 
-        const result = await Github.updateOne(
+        const result = await Session.updateOne(
           update.filter,
           update.update,
           { upsert: true, runValidators: true }
@@ -155,12 +153,12 @@ router.patch('/updateMany', async (req, res) => {
     }
     res.json(response);
   } catch (error) {
-    console.error('Error updating multiple GitHub repos:', error);
-    res.status(500).json({ error: 'Internal server error while updating repositories' });
+    console.error('Error updating multiple sessions:', error);
+    res.status(500).json({ error: 'Internal server error while updating sessions' });
   }
 });
 
-// DELETE /api/github - Delete one GitHub repo
+// DELETE /api/sessions - Delete one session
 router.delete('/', async (req, res) => {
   try {
     let query;
@@ -174,15 +172,45 @@ router.delete('/', async (req, res) => {
       return res.status(400).json({ error: 'Query cannot be empty' });
     }
 
-    const result = await Github.deleteOne(query);
+    const result = await Session.deleteOne(query);
     if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'No repository found matching the query' });
+      return res.status(404).json({ error: 'No session found matching the query' });
     }
     res.json({ deletedCount: result.deletedCount });
   } catch (error) {
-    console.error('Error deleting GitHub repo:', error);
-    res.status(500).json({ error: 'Internal server error while deleting repository' });
+    console.error('Error deleting session:', error);
+    res.status(500).json({ error: 'Internal server error while deleting session' });
   }
 });
 
-module.exports = router; 
+// POST /api/sessions/messages - Add a message to a session
+router.post('/messages', async (req, res) => {
+  try {
+    const { sessionId, role, content } = req.body;
+    if (!sessionId || !role || !content) {
+      return res.status(400).json({ error: 'sessionId, role, and content are required' });
+    }
+    
+    const result = await Session.findByIdAndUpdate(
+      sessionId,
+      { 
+        $push: { messages: { role, content } }
+      },
+      { new: true, runValidators: true }
+    );
+    
+    if (!result) {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error adding message to session:', error);
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: 'Validation error', details: error.errors });
+    }
+    res.status(500).json({ error: 'Internal server error while adding message' });
+  }
+});
+
+module.exports = router;
