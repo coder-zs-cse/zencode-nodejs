@@ -65,19 +65,13 @@ router.post('/insertMany', async (req, res) => {
   }
 });
 
-// GET /api/github/findOne - Find one GitHub repo
-router.get('/findOne', async (req, res) => {
+// POST /api/github/findOne - Find one GitHub repo
+router.post('/findOne', async (req, res) => {
   try {
-    let query;
-    try {
-      query = JSON.parse(req.query.query || '{}');
-    } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid query format' });
-    }
-
+    const query = req.body.query || {};
     const result = await Github.findOne(query);
     if (!result) {
-      return res.status(200).json({ success: false,message: 'Repository not found' });
+      return res.status(200).json({ success: false, message: 'Repository not found' });
     }
     res.json({ success: true, data: result });
   } catch (error) {
@@ -86,16 +80,10 @@ router.get('/findOne', async (req, res) => {
   }
 });
 
-// GET /api/github/find - Find many GitHub repos
-router.get('/find', async (req, res) => {
+// POST /api/github/find - Find many GitHub repos
+router.post('/find', async (req, res) => {
   try {
-    let query;
-    try {
-      query = JSON.parse(req.query.query || '{}');
-    } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid query format' });
-    }
-
+    const query = req.body.query || {};
     const result = await Github.find(query);
     res.json(result);
   } catch (error) {

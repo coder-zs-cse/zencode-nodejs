@@ -59,16 +59,10 @@ router.post('/insertMany', async (req, res) => {
   }
 });
 
-// GET /api/sessions/findOne - Find one session
-router.get('/findOne', async (req, res) => {
+// POST /api/sessions/findOne - Find one session
+router.post('/findOne', async (req, res) => {
   try {
-    let query;
-    try {
-      query = JSON.parse(req.query.query || '{}');
-    } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid query format' });
-    }
-
+    const query = req.body.query || {};
     const result = await Session.findOne(query);
     if (!result) {
       return res.status(404).json({ error: 'Session not found' });
@@ -80,16 +74,10 @@ router.get('/findOne', async (req, res) => {
   }
 });
 
-// GET /api/sessions/find - Find many sessions
-router.get('/find', async (req, res) => {
+// POST /api/sessions/find - Find many sessions
+router.post('/find', async (req, res) => {
   try {
-    let query;
-    try {
-      const cleanQuery = req.query.query ? req.query.query.replace(/'/g, '"') : '{}';
-      query = JSON.parse(cleanQuery);
-    } catch (parseError) {
-      return res.status(400).json({ error: 'Invalid query format' });
-    }
+    const query = req.body.query || {};
     const result = await Session.find(query).sort({ updatedAt: -1 }); // Most recent first
     res.json(result);
   } catch (error) {
